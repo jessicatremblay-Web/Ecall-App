@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <!-- IMPORT CHART.JS POUR LE MANHATTAN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root { --navy: #00205B; --blue: #0055A5; --bg: #F4F6F9; --border: #DCDFE6; --text: #2C3E50; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg); margin: 0; padding: 0; color: var(--text); }
+    header { background: var(--navy); color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .badge-qualite { background: var(--blue); padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); padding: 0 24px; }
+    .tab { padding: 14px 20px; cursor: pointer; font-weight: 600; font-size: 14px; color: #606266; border-bottom: 3px solid transparent; }
+    .tab:hover { color: var(--blue); }
+    .tab.active { border-bottom-color: var(--blue); color: var(--blue); }
+    .tab .count-badge { background: #E6A23C; color: white; border-radius: 10px; padding: 2px 7px; font-size: 11px; margin-left: 6px; }
+    .container { padding: 24px; max-width: 1280px; margin: 0 auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: white; border-radius: 6px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-size: 12px; font-weight: 700; color: var(--navy); text-transform: uppercase; margin-bottom: 14px; border-bottom: 1px solid #E4E7ED; padding-bottom: 6px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+    label { font-size: 11px; font-weight: 700; margin-bottom: 5px; color: #4A5568; text-transform: uppercase; }
+    input[type="text"], input[type="date"], select, textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; outline: none; background: #FAFAFA; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); background: white; }
+    textarea { resize: vertical; min-height: 60px; }
+    .radio-group { display: flex; gap: 20px; align-items: center; padding: 4px 0; flex-wrap: wrap; }
+    .radio-group label { font-weight: 500; font-size: 13px; text-transform: none; cursor: pointer; display: flex; align-items: center; gap: 6px; margin: 0; }
+    .btn { background: var(--navy); color: white; border: none; padding: 10px 22px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn:hover { background: var(--blue); }
+    .btn-action { background: #3498DB; padding: 6px 14px; font-size: 12px; border-radius: 4px; border: none; color: white; cursor: pointer; }
+    .btn-action:hover { background: #2980B9; }
+    .btn-reactivate { background: #E67E22; padding: 6px 14px; font-size: 12px; border-radius: 4px; border: none; color: white; cursor: pointer; }
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; font-size: 12px; }
+    th { background: #F8F9FA; color: var(--navy); font-weight: 700; text-transform: uppercase; }
+    tr:hover { background-color: #F5F7FA; }
+    .search-bar { width: 300px; margin-bottom: 15px; }
+
+    /* Style de la fenêtre modale (Pop-up) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 8px;
+      width: 85%;
+      max-width: 800px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .modal-header {
+      background-color: #f4f7f9;
+      padding: 15px 20px;
+      border-bottom: 2px solid #00205b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .close-btn {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close-btn:hover { color: #000; }
+    .modal-body {
+      padding: 20px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .detail-section {
+      background: #f9f9f9;
+      border-left: 4px solid #0055a5;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .detail-item strong { color: #555; font-size: 0.85em; display: block; text-transform: uppercase; }
+    .detail-item span { font-size: 1em; color: #111; }
+
+    /* FILTRES ACTIVES - CSS */
+    .filters-row { display: flex; gap: 15px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+    .f-card { min-width: 140px; flex: 1; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; background: white; }
+    .f-card-all { min-width: 100px; flex: 0.5; justify-content: center; align-items: center; background: var(--navy); color: white; cursor: pointer; font-weight: bold; border: none; transition: background 0.2s; }
+    .f-card-all:hover, .f-card-all.selected { background: var(--blue); }
+    .f-main { text-align: center; padding: 10px; cursor: pointer; font-weight: bold; border-bottom: 1px solid var(--border); transition: background 0.2s; color: var(--navy); }
+    .f-main:hover, .f-main.selected { background: #D6E4FF; color: var(--navy); }
+    .f-sub { display: flex; flex: 1; }
+    .f-pill { flex: 1; text-align: center; font-size: 11px; padding: 8px 5px; cursor: pointer; font-weight: 600; color: #555; background: #f8f9fa; border-right: 1px solid var(--border); transition: all 0.2s; }
+    .f-pill:last-child { border-right: none; }
+    .f-pill:hover, .f-pill.selected { background: #C3D4F5; color: var(--navy); }
+
+    /* COLONNES TRIABLES */
+    th.sortable { cursor: pointer; user-select: none; transition: background 0.2s; position: relative; padding-right: 20px;}
+    th.sortable:hover { background: #E8ECEF; }
+
+    .data-read { background: #f8f9fa; padding: 12px; border-radius: 4px; border: 1px solid #e9ecef; margin-bottom: 15px; font-size:13px; }
+    .data-read strong { color: var(--navy); }
+    .data-block { margin-bottom: 8px; }
+    
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+    .kpi-card { background: white; padding: 24px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+    .kpi-title { font-size: 14px; font-weight: bold; color: #7F8C8D; text-transform: uppercase; }
+    .kpi-value { font-size: 42px; font-weight: 800; color: var(--navy); margin: 10px 0; }
+    
+    .chart-container { position: relative; height: 350px; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div style="font-weight: 700; font-size: 16px;">AIRBUS | Call Sheet For Derogation / APSR</div>
+    <div class="badge-qualite">QUALITÉ PRODUCTION</div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('creer')">Créer</div>
+    <div class="tab" onclick="switchTab('actives')">Actives <span class="count-badge" id="badgeActives">0</span></div>
+    <div class="tab" onclick="switchTab('archives')">Archives</div>
+    <div class="tab" onclick="switchTab('kpis')">KPIs</div>
+  </div>
+
+  <div class="container">
+
+    <!-- ONGLET CREER -->
+    <div id="tab-creer" class="tab-content active">
+      <form id="callSheetForm" onsubmit="submitForm(event)">
+        
+        <!-- 1. Section ZAP -->
+        <div class="card">
+          <div class="form-group">
+            <label>ZAP : *</label>
+            <div class="radio-group">
+              <label><input type="radio" name="zap" value="PE" required> PE</label>
+              <label><input type="radio" name="zap" value="MCA" required> MCA</label>
+              <label><input type="radio" name="zap" value="FINITION" required> FINITION</label>
+              <label><input type="radio" name="zap" value="MESURE" required> MESURE</label>
+              <label><input type="radio" name="zap" value="PAINT-SHOP" required> PAINT-SHOP</label>
+              <label><input type="radio" name="zap" value="OSW" required> OSW</label>
+              <label><input type="radio" name="zap" value="SYSTÈME" required> SYSTÈME</label>
+              <label><input type="radio" name="zap" value="LIVRAISON" required> LIVRAISON</label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 2. Section INFORMATION -->
+        <div class="card">
+          <div class="card-title">INFORMATION</div>
+          <div class="grid-4">
+            <div class="form-group"><label>OF *</label><input type="text" name="of" required></div>
+            <div class="form-group"><label>OPE *</label><input type="text" name="ope" required></div>
+            <div class="form-group"><label>MSN *</label><input type="text" name="msn" required></div>
+            <div class="form-group"><label>DATE *</label><input type="date" name="date" id="inputDate" required></div>
+            <div class="form-group"><label>NOM DE L'OPÉRATEUR *</label><input type="text" name="nomOperateur" required></div>
+            <div class="form-group"><label>MATRICULE *</label><input type="text" name="matricule" required></div>
+          </div>
+        </div>
+        
+        <!-- 3. Section Localisation -->
+        <div class="card">
+          <div class="card-title">Localisation</div>
+          <div class="grid-4">
+            <div class="form-group"><label>FS :</label><input type="text" name="fs"></div>
+            <div class="form-group"><label>STRINGER :</label><input type="text" name="stringer"></div>
+            <div class="form-group"><label>BL :</label><input type="text" name="bl"></div>
+            <div class="form-group"><label>LOCATION :</label><input type="text" name="location"></div>
+          </div>
+        </div>
+        
+        <!-- 4. Section Description & Responsabilité -->
+        <div class="card">
+          <div class="card-title">Description</div>
+          <div class="grid-2">
+            <div class="form-group"><label>QUOI : *</label><textarea name="quoi" required></textarea></div>
+            <div class="form-group"><label>POURQUOI : *</label><textarea name="pourquoi" required></textarea></div>
+          </div>
+          <div class="form-group"><label>COMMENT : *</label><textarea name="comment" required></textarea></div>
+          
+          <div class="card-title" style="margin-top:15px;">Responsabilité : *</div>
+          <div class="grid-2">
+            <div>
+              <strong>LIGNE :</strong>
+              <div class="form-group" style="margin-top:5px;">
+                <label><input type="radio" name="responsabilite" value="Facteur humain" required> Facteur humain</label>
+                <label><input type="radio" name="responsabilite" value="Outillage"> Outillage</label>
+                <label><input type="radio" name="responsabilite" value="Non suivi du processus"> Non suivi du processus</label>
+                <label><input type="radio" name="responsabilite" value="Fiche Technique"> Fiche Technique</label>
+              </div>
+            </div>
+            <div>
+              <strong>FOURNISSEUR :</strong>
+              <div class="form-group" style="margin-top:5px;">
+                <label><input type="radio" name="responsabilite" value="Fournisseur Interne"> Interne</label>
+                <label><input type="radio" name="responsabilite" value="Fournisseur Externe"> Externe</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:15px;">
+            <label>Solution Proposée :</label>
+            <textarea name="solutionProposee"></textarea>
+          </div>
+        </div>
+        
+        <div style="text-align: right;">
+          <button type="submit" class="btn">🚀 Émettre la Call Sheet</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ONGLET ACTIVES -->
+    <div id="tab-actives" class="tab-content">
+      <div id="activeFiltersContainer" class="filters-row"></div>
+      <div class="card">
+        <div class="card-title">Liste des Call Sheets</div>
+        <div class="table-container">
+          <table id="tableActives">
+            <thead>
+              <tr><th>ID</th><th>ZAP</th><th>MSN</th><th>OF</th><th>Opérateur</th><th>Date</th><th>Quoi</th><th>Action</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONGLET ARCHIVES -->
+    <div id="tab-archives" class="tab-content">
+      <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Historique & Archives</span>
+          <span style="font-size:10px; font-weight:normal; text-transform:none; color:#7F8C8D;">💡 Cliquez sur l'en-tête d'une colonne pour trier</span>
+        </div>
+        <input type="text" id="searchArchive" class="search-bar" placeholder="🔍 Rechercher (MSN, OF, ID...)" onkeyup="filterArchives()">
+        
+        <div class="table-container">
+          <table id="tableArchives">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="ID" onclick="sortArchives('ID')">ID</th>
+                <th class="sortable" data-col="UAP" onclick="sortArchives('UAP')">ZAP</th>
+                <th class="sortable" data-col="MSN" onclick="sortArchives('MSN')">MSN</th>
+                <th class="sortable" data-col="OF" onclick="sortArchives('OF')">OF</th>
+                <th class="sortable" data-col="Date_Cloture" onclick="sortArchives('Date_Cloture')">Date Clôture</th>
+                <th class="sortable" data-col="Type_Resolution" onclick="sortArchives('Type_Resolution')">Résolution</th>
+                <th class="sortable" data-col="Doc_Reference" onclick="sortArchives('Doc_Reference')">Réf Doc</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONGLET KPIS -->
+    <div id="tab-kpis" class="tab-content">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-title">MCA (Ouvertes)</div><div class="kpi-value" id="kpi-mca">0</div></div>
+        <div class="kpi-card"><div class="kpi-title">FINITION (Ouvertes)</div><div class="kpi-value" id="kpi-finition">0</div></div>
+        <div class="kpi-card"><div class="kpi-title">SYSTÈME (Ouvertes)</div><div class="kpi-value" id="kpi-systeme">0</div></div>
+        <div class="kpi-card" style="border-top: 4px solid var(--navy);"><div class="kpi-title">TOTAL ARCHIVÉES</div><div class="kpi-value" id="kpi-archives">0</div></div>
+      </div>
+      <div class="card" style="margin-top: 20px;">
+        <div class="card-title">Volume de Call Sheets par Semaine (Manhattan)</div>
+        <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CLÔTURE (Traitement) -->
+  <div id="modalClose" class="modal">
+    <div class="modal-content">
+      <h3 style="color:var(--navy); margin-top:0; border-bottom: 2px solid var(--blue); padding-bottom: 10px;">Traitement : <span id="detailIdText"></span></h3>
+      <input type="hidden" id="closeId">
+      <div class="data-read grid-2">
+        <div><div class="data-block"><strong>ZAP :</strong> <span id="viewUAP"></span></div><div class="data-block"><strong>MSN :</strong> <span id="viewMSN"></span></div><div class="data-block"><strong>OF/OPE :</strong> <span id="viewOF"></span></div></div>
+        <div><div class="data-block"><strong>Responsabilité :</strong> <span id="viewResp"></span></div><div class="data-block"><strong>Localisation :</strong> <span id="viewLoc"></span></div></div>
+      </div>
+      <div class="data-read"><div class="data-block"><strong>Quoi :</strong> <span id="viewQuoi"></span></div><div class="data-block"><strong>Pourquoi :</strong> <span id="viewPourquoi"></span></div></div>
+      <div class="form-group" style="margin-top:15px;"><label style="color:var(--blue);">📝 Ajouter des informations (Investigation, Notes) :</label><textarea id="closeInfoAdd"></textarea></div>
+      <div class="grid-2">
+        <div class="form-group"><label>Type de résolution : *</label><select id="closeType" required><option value="Dérogation validée">Dérogation validée</option><option value="Retouche effectuée">Retouche effectuée</option><option value="Rejetée">Rejetée</option><option value="Autre">Autre</option></select></div>
+        <div class="form-group"><label>N° Document référence : *</label><input type="text" id="closeDocRef" required></div>
+      </div>
+      <div style="text-align: right; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
+        <button class="btn" style="background:#7F8C8D; margin-right:8px;" onclick="closeModal()">Annuler</button>
+        <button class="btn" style="background:#28A745;" onclick="confirmClose()">✔️ Enregistrer et Clôturer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FENÊTRE MODALE DÉTAILS COMPLETS CALL SHEET -->
+  <div id="detailsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin: 0;">Détails de la Call Sheet : <span id="modal-id" style="color: #0055a5;"></span></h3>
+        <span class="close-btn" onclick="fermerModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="modal-details-content">
+        <div style="text-align: center; padding: 20px;">Chargement des données...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // INITIALISATION DE LA BASE DE DONNÉES LOCALE
+    // ==========================================
+    const STORAGE_ACTIVE = 'ecall_active';
+    const STORAGE_ARCHIVE = 'ecall_archive';
+
+    if (!localStorage.getItem(STORAGE_ACTIVE)) {
+      localStorage.setItem(STORAGE_ACTIVE, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(STORAGE_ARCHIVE)) {
+      localStorage.setItem(STORAGE_ARCHIVE, JSON.stringify([]));
+    }
+
+    const serverMock = {
+      getActiveCallSheets: function() { return JSON.parse(localStorage.getItem(STORAGE_ACTIVE)); },
+      getArchivedCallSheets: function() { return JSON.parse(localStorage.getItem(STORAGE_ARCHIVE)); },
+      saveActiveCallSheets: function(data) { localStorage.setItem(STORAGE_ACTIVE, JSON.stringify(data)); },
+      saveArchivedCallSheets: function(data) { localStorage.setItem(STORAGE_ARCHIVE, JSON.stringify(data)); }
+    };
+
+    let activeDataCache = [];
+    let archiveDataCache = [];
+    let weeklyChartInstance = null;
+    let sortConfig = { key: 'Date_Cloture', asc: false };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('inputDate').valueAsDate = new Date();
+      activeDataCache = serverMock.getActiveCallSheets();
+      updateBadges();
+    });
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      const selectedTab = Array.from(document.querySelectorAll('.tab')).find(t => t.textContent.toLowerCase().includes(tabName));
+      if (selectedTab) selectedTab.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+
+      if (tabName === 'actives') loadActives();
+      if (tabName === 'archives') loadArchives();
+      if (tabName === 'kpis') loadKpis();
+    }
+
+    function submitForm(e) {
+      e.preventDefault();
+      const form = document.getElementById('callSheetForm');
+      const formData = new FormData(form);
+      const dataObj = Object.fromEntries(formData.entries());
+      
+      // Générer un ID unique
+      const d = new Date();
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const newId = "CS-" + d.getFullYear().toString().substr(-2) + 
+                    (d.getMonth()+1).toString().padStart(2, '0') + 
+                    d.getDate().toString().padStart(2, '0') + "-" + randomNum;
+      
+      const newCallSheet = {
+        ID: newId,
+        ZAP: dataObj.zap,
+        OF: dataObj.of,
+        OPE: dataObj.ope,
+        MSN: dataObj.msn,
+        Date_Creation: dataObj.date,
+        Nom_Operateur: dataObj.nomOperateur,
+        Matricule: dataObj.matricule,
+        FS: dataObj.fs,
+        Stringer: dataObj.stringer,
+        BL: dataObj.bl,
+        Location: dataObj.location,
+        Quoi: dataObj.quoi,
+        Pourquoi: dataObj.pourquoi,
+        Comment: dataObj.comment,
+        Responsabilite: dataObj.responsabilite,
+        SolutionProposee: dataObj.solutionProposee,
+        Status: "Ouvert"
+      };
+
+      let activeData = serverMock.getActiveCallSheets();
+      activeData.unshift(newCallSheet); // Ajouter au début
+      serverMock.saveActiveCallSheets(activeData);
+      activeDataCache = activeData;
+
+      alert('✅ Créée avec succès !');
+      form.reset();
+      document.getElementById('inputDate').valueAsDate = new Date();
+      updateBadges();
+    }
+
+    // ---------- LOGIQUE ACTIVES ----------
+    function loadActives() {
+      activeDataCache = serverMock.getActiveCallSheets();
+      document.getElementById('badgeActives').innerText = activeDataCache.length;
+      renderActiveFilters();
+      renderActivesTable(activeDataCache);
+    }
+
+    function renderActiveFilters() {
+      const stats = {};
+      
+      activeDataCache.forEach(item => {
+        const zap = String(item.ZAP || item.UAP || '').trim().toUpperCase();
+        if (!zap) return;
+
+        if (!stats[zap]) {
+          stats[zap] = { total: 0, pair: 0, impair: 0 };
+        }
+
+        stats[zap].total++;
+        const msnStr = String(item.MSN || '').replace(/[^0-9]/g, '');
+        if (msnStr) {
+          const msnNum = parseInt(msnStr, 10);
+          if (msnNum % 2 === 0) stats[zap].pair++;
+          else stats[zap].impair++;
+        }
+      });
+
+      const container = document.getElementById('activeFiltersContainer');
+      let html = `<div class="f-card f-card-all selected" onclick="applyFilter('ALL', 'ALL', this, event)">
+                    <div style="font-size:12px;">TOUTES</div>
+                    <div style="font-size:24px;">${activeDataCache.length}</div>
+                  </div>`;
+
+      Object.keys(stats).sort().forEach(zap => {
+        html += `
+          <div class="f-card">
+            <div class="f-main" onclick="applyFilter('${zap}', 'ALL', this, event)">${zap} (${stats[zap].total})</div>
+            <div class="f-sub">
+              <div class="f-pill" onclick="applyFilter('${zap}', 'PAIR', this, event)">Pair: ${stats[zap].pair}</div>
+              <div class="f-pill" onclick="applyFilter('${zap}', 'IMPAIR', this, event)">Impair: ${stats[zap].impair}</div>
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function applyFilter(zap, parity, elem, event) {
+      if(event) event.stopPropagation();
+      document.querySelectorAll('.f-main, .f-pill, .f-card-all').forEach(el => el.classList.remove('selected'));
+      elem.classList.add('selected');
+      
+      let filtered = activeDataCache;
+      
+      if (zap !== 'ALL') {
+        filtered = filtered.filter(item => String(item.ZAP || item.UAP || '').trim().toUpperCase() === zap);
+      }
+      
+      if (parity !== 'ALL') {
+        filtered = filtered.filter(item => {
+          const msnStr = String(item.MSN || '').replace(/[^0-9]/g, '');
+          if (!msnStr) return false;
+          const msnNum = parseInt(msnStr, 10);
+          return parity === 'PAIR' ? (msnNum % 2 === 0) : (msnNum % 2 !== 0);
+        });
+      }
+      
+      renderActivesTable(filtered);
+    }
+
+    function renderActivesTable(data) {
+      const tbody = document.querySelector('#tableActives tbody');
+      tbody.innerHTML = '';
+      
+      if (!data || data.length === 0) {
+        return tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">Aucune Call Sheet pour ce filtre. 🎉</td></tr>';
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        const zapVal = item.ZAP || item.UAP || '';
+        
+        const q = String(item.Quoi || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const p = String(item.Pourquoi || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const c = String(item.Comment || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const s = String(item.SolutionProposee || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+        tr.innerHTML = `
+          <td>
+            <a href="javascript:void(0);" style="color: #0055a5; font-weight: bold; text-decoration: underline;" 
+               onclick="ouvrirModal('${item.ID}', '${zapVal}', '${item.OF || ''}', '${item.OPE || ''}', '${item.MSN || ''}', '${item.Date_Creation || ''}', '${item.Nom_Operateur || ''}', '${item.Matricule || ''}', '${item.AM_ZB || ''}', '${item.DERO || ''}', '${item.FS || ''}', '${item.Stringer || ''}', '${item.BL || ''}', '${item.Location || ''}', '${q}', '${p}', '${c}', '${item.Responsabilite || ''}', '${s}', '', ''); return false;">
+               ${item.ID}
+            </a>
+          </td>
+          <td>${zapVal}</td>
+          <td><strong>${item.MSN || ''}</strong></td>
+          <td>${item.OF || ''}</td>
+          <td>${item.Nom_Operateur || ''}</td>
+          <td>${item.Date_Creation || ''}</td>
+          <td>${String(item.Quoi || '').substring(0, 45)}...</td>
+          <td><button class="btn-action" onclick="openDetailModal('${item.ID}')">🔍 Traiter</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openDetailModal(id) {
+      const item = activeDataCache.find(x => x.ID === id);
+      if(!item) return;
+      document.getElementById('closeId').value = item.ID;
+      document.getElementById('detailIdText').innerText = item.ID;
+      document.getElementById('viewUAP').innerText = item.ZAP || item.UAP || '';
+      document.getElementById('viewMSN').innerText = item.MSN || '';
+      document.getElementById('viewOF').innerText = item.OF || '';
+      document.getElementById('viewResp').innerText = item.Responsabilite || '';
+      document.getElementById('viewLoc').innerText = `FS:${item.FS || ''} / STR:${item.Stringer || ''} / BL:${item.BL || ''}`;
+      document.getElementById('viewQuoi').innerText = item.Quoi || '';
+      document.getElementById('viewPourquoi').innerText = item.Pourquoi || '';
+      document.getElementById('closeInfoAdd').value = item.Info_Additionnelle || '';
+      document.getElementById('closeDocRef').value = '';
+      document.getElementById('modalClose').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('modalClose').style.display = 'none'; }
+
+    function confirmClose() {
+      const id = document.getElementById('closeId').value;
+      const infoAdd = document.getElementById('closeInfoAdd').value;
+      const type = document.getElementById('closeType').value;
+      const docRef = document.getElementById('closeDocRef').value;
+      
+      if (!docRef.trim()) return alert('N° Document requis.');
+      
+      let activeData = serverMock.getActiveCallSheets();
+      const index = activeData.findIndex(x => x.ID === id);
+      
+      if (index > -1) {
+        let itemToArchive = activeData[index];
+        itemToArchive.Info_Additionnelle = infoAdd;
+        itemToArchive.Type_Resolution = type;
+        itemToArchive.Doc_Reference = docRef;
+        itemToArchive.Date_Cloture = new Date().toISOString().split('T')[0];
+        itemToArchive.Status = "Fermé";
+        
+        let archiveData = serverMock.getArchivedCallSheets();
+        archiveData.unshift(itemToArchive);
+        serverMock.saveArchivedCallSheets(archiveData);
+        
+        activeData.splice(index, 1);
+        serverMock.saveActiveCallSheets(activeData);
+        
+        closeModal(); 
+        loadActives(); 
+        updateBadges();
+      }
+    }
+
+    // ---------- LOGIQUE ARCHIVES ----------
+    function loadArchives() {
+      archiveDataCache = serverMock.getArchivedCallSheets();
+      sortArchives('Date_Cloture', true); 
+    }
+
+    function sortArchives(colKey, isInitialLoad = false) {
+      if (!isInitialLoad) {
+        if (sortConfig.key === colKey) sortConfig.asc = !sortConfig.asc;
+        else { sortConfig.key = colKey; sortConfig.asc = true; }
+      }
+
+      document.querySelectorAll('#tableArchives th.sortable').forEach(th => {
+        let baseText = th.innerText.replace(/ ↑| ↓/g, ''); 
+        if (th.getAttribute('data-col') === sortConfig.key) {
+          th.innerText = baseText + (sortConfig.asc ? ' ↑' : ' ↓');
+        } else {
+          th.innerText = baseText;
+        }
+      });
+
+      archiveDataCache.sort((a, b) => {
+        let valA = a[sortConfig.key] || '';
+        let valB = b[sortConfig.key] || '';
+        let mod = sortConfig.asc ? 1 : -1;
+
+        if (sortConfig.key === 'ID') {
+          let numA = parseInt(String(valA).replace(/\D/g, '')) || 0;
+          let numB = parseInt(String(valB).replace(/\D/g, '')) || 0;
+          return (numA - numB) * mod;
+        }
+        if (sortConfig.key === 'MSN' || sortConfig.key === 'OF') {
+          let numA = parseInt(String(valA).replace(/\D/g, ''));
+          let numB = parseInt(String(valB).replace(/\D/g, ''));
+          if (!isNaN(numA) && !isNaN(numB) && numA !== numB) {
+            return (numA - numB) * mod;
+          }
+        }
+        return String(valA).localeCompare(String(valB)) * mod;
+      });
+
+      filterArchives();
+    }
+
+    function filterArchives() {
+      const q = document.getElementById('searchArchive').value.toLowerCase();
+      const filtered = archiveDataCache.filter(i => 
+        String(i.MSN || '').toLowerCase().includes(q) || 
+        String(i.OF || '').toLowerCase().includes(q) || 
+        String(i.ID || '').toLowerCase().includes(q)
+      );
+      renderArchivesTable(filtered);
+    }
+
+    function renderArchivesTable(data) {
+      const tbody = document.querySelector('#tableArchives tbody');
+      tbody.innerHTML = '';
+      if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Vide.</td></tr>';
+      
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        const zapVal = item.ZAP || item.UAP || '';
+        
+        const q = String(item.Quoi || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const p = String(item.Pourquoi || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const c = String(item.Comment || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const s = String(item.SolutionProposee || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const resType = String(item.Type_Resolution || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const docRef = String(item.Doc_Reference || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+        tr.innerHTML = `
+          <td>
+            <a href="javascript:void(0);" style="color: #0055a5; font-weight: bold; text-decoration: underline;" 
+               onclick="ouvrirModal('${item.ID}', '${zapVal}', '${item.OF || ''}', '${item.OPE || ''}', '${item.MSN || ''}', '${item.Date_Creation || item.Date_Cloture || ''}', '${item.Nom_Operateur || ''}', '${item.Matricule || ''}', '${item.AM_ZB || ''}', '${item.DERO || ''}', '${item.FS || ''}', '${item.Stringer || ''}', '${item.BL || ''}', '${item.Location || ''}', '${q}', '${p}', '${c}', '${item.Responsabilite || ''}', '${s}', '${resType}', '${docRef}'); return false;">
+               ${item.ID}
+            </a>
+          </td>
+          <td>${zapVal}</td>
+          <td>${item.MSN || ''}</td>
+          <td>${item.OF || ''}</td>
+          <td>${item.Date_Cloture || ''}</td>
+          <td><span style="color:green; font-weight:bold;">${item.Type_Resolution || ''}</span></td>
+          <td>${item.Doc_Reference || ''}</td>
+          <td><button class="btn-reactivate" onclick="reactivateItem('${item.ID}')">🔄 Ré-activer</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function reactivateItem(id) {
+      if(confirm(`Ré-activer ${id} ?`)) {
+        let archiveData = serverMock.getArchivedCallSheets();
+        let activeData = serverMock.getActiveCallSheets();
+        
+        const index = archiveData.findIndex(x => x.ID === id);
+        if (index > -1) {
+          let itemToReactivate = archiveData[index];
+          itemToReactivate.Status = "Ouvert";
+          itemToReactivate.Date_Cloture = "";
+          itemToReactivate.Type_Resolution = "";
+          itemToReactivate.Doc_Reference = "";
+          
+          activeData.unshift(itemToReactivate);
+          serverMock.saveActiveCallSheets(activeData);
+          
+          archiveData.splice(index, 1);
+          serverMock.saveArchivedCallSheets(archiveData);
+          
+          loadArchives(); 
+          updateBadges();
+        }
+      }
+    }
+
+    // ---------- GRAPHIQUE ET KPIS ----------
+    function getISOWeek(date) {
+        let target = new Date(date.valueOf());
+        let dayNr = (date.getDay() + 6) % 7;
+        target.setDate(target.getDate() - dayNr + 3);
+        let firstThursday = target.valueOf();
+        target.setMonth(0, 1);
+        if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+        return 1 + Math.ceil((firstThursday - target) / 604800000);
+    }
+
+    function calculateKpis() {
+      const activeData = serverMock.getActiveCallSheets();
+      const archiveData = serverMock.getArchivedCallSheets();
+      const allData = [...activeData, ...archiveData];
+
+      let mcaCount = 0;
+      let finitionCount = 0;
+      let systemeCount = 0;
+
+      activeData.forEach(item => {
+        const zap = String(item.ZAP || item.UAP || '').toUpperCase();
+        if (zap === 'MCA') mcaCount++;
+        else if (zap === 'FINITION') finitionCount++;
+        else if (zap === 'SYSTÈME') systemeCount++;
+      });
+
+      let weeklyStats = {};
+      allData.forEach(item => {
+        const dateStr = item.Date_Creation || item.Date_Cloture;
+        if (!dateStr) return;
+        
+        const dateVal = new Date(dateStr);
+        if (isNaN(dateVal)) return;
+
+        const zap = String(item.ZAP || item.UAP || '').toUpperCase();
+        if (['MCA', 'FINITION', 'SYSTÈME'].includes(zap)) {
+          const week = `Semaine ${getISOWeek(dateVal)}`;
+          if (!weeklyStats[week]) weeklyStats[week] = { 'MCA': 0, 'FINITION': 0, 'SYSTÈME': 0 };
+          weeklyStats[week][zap]++;
+        }
+      });
+
+      return {
+        MCA: mcaCount,
+        FINITION: finitionCount,
+        SYSTÈME: systemeCount,
+        TOTAL_ARCHIVES: archiveData.length,
+        weeklyStats: weeklyStats
+      };
+    }
+
+    function loadKpis() {
+      const d = calculateKpis();
+      
+      document.getElementById('kpi-mca').innerText = d.MCA || 0;
+      document.getElementById('kpi-finition').innerText = d.FINITION || 0;
+      document.getElementById('kpi-systeme').innerText = d.SYSTÈME || 0;
+      document.getElementById('kpi-archives').innerText = d.TOTAL_ARCHIVES || 0;
+
+      const ctx = document.getElementById('weeklyChart').getContext('2d');
+      const weeks = Object.keys(d.weeklyStats || {}).sort();
+      const dataMCA = weeks.map(w => d.weeklyStats[w].MCA);
+      const dataFinition = weeks.map(w => d.weeklyStats[w].FINITION);
+      const dataSysteme = weeks.map(w => d.weeklyStats[w].SYSTÈME);
+
+      const chartData = {
+        labels: weeks,
+        datasets: [
+          { label: 'MCA', data: dataMCA, backgroundColor: '#00205B', stack: 'Stack 0' },
+          { label: 'FINITION', data: dataFinition, backgroundColor: '#0055A5', stack: 'Stack 0' },
+          { label: 'SYSTÈME', data: dataSysteme, backgroundColor: '#E6A23C', stack: 'Stack 0' }
+        ]
+      };
+
+      if (weeklyChartInstance) {
+        weeklyChartInstance.data = chartData;
+        weeklyChartInstance.update();
+      } else {
+        weeklyChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: chartData,
+          options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } } }
+        });
+      }
+    }
+
+    function updateBadges() {
+      activeDataCache = serverMock.getActiveCallSheets();
+      document.getElementById('badgeActives').innerText = activeDataCache.length;
+    }
+
+    // ---------- MODALE DÉTAILS COMPLETS ----------
+    function fermerModal() {
+      document.getElementById("detailsModal").style.display = "none";
+    }
+
+    function ouvrirModal(id, zap, of, ope, msn, date, operateur, matricule, amZb, dero, fs, stringer, bl, location, quoi, pourquoi, comment, responsabilite, solution, typeRes, docRef) {
+      document.getElementById("detailsModal").style.display = "flex";
+      document.getElementById("modal-id").innerText = id;
+      
+      let htmlContenu = `
+        <div class="detail-section">
+          <h4 style="margin-top:0; color:#00205b;">Général & Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><strong>ZAP</strong> <span>${zap || '-'}</span></div>
+            <div class="detail-item"><strong>OF</strong> <span>${of || '-'}</span></div>
+            <div class="detail-item"><strong>OPE</strong> <span>${ope || '-'}</span></div>
+            <div class="detail-item"><strong>MSN</strong> <span>${msn || '-'}</span></div>
+            <div class="detail-item"><strong>Date</strong> <span>${date || '-'}</span></div>
+            <div class="detail-item"><strong>Opérateur</strong> <span>${operateur || '-'} (Mat: ${matricule || '-'})</span></div>
+            <div class="detail-item"><strong>AM/ZB</strong> <span>${amZb || '-'}</span></div>
+            <div class="detail-item"><strong>DERO</strong> <span>${dero || '-'}</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 style="margin-top:0; color:#00205b;">Localisation</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><strong>FS</strong> <span>${fs || '-'}</span></div>
+            <div class="detail-item"><strong>Stringer</strong> <span>${stringer || '-'}</span></div>
+            <div class="detail-item"><strong>BL</strong> <span>${bl || '-'}</span></div>
+            <div class="detail-item"><strong>Location</strong> <span>${location || '-'}</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 style="margin-top:0; color:#00205b;">Description de la non-conformité</h4>
+          <div class="detail-item" style="margin-bottom: 10px;"><strong>QUOI :</strong> <span>${quoi || '-'}</span></div>
+          <div class="detail-item" style="margin-bottom: 10px;"><strong>POURQUOI :</strong> <span>${pourquoi || '-'}</span></div>
+          <div class="detail-item" style="margin-bottom: 10px;"><strong>COMMENT :</strong> <span>${comment || '-'}</span></div>
+          
+          <div class="detail-grid" style="margin-top:15px;">
+            <div class="detail-item"><strong>Responsabilité :</strong> <span style="background: #ffeeba; padding: 2px 6px; border-radius: 4px;">${responsabilite || '-'}</span></div>
+          </div>
+          <div class="detail-item" style="margin-top: 10px;"><strong>Solution Proposée :</strong> <span>${solution || 'Aucune'}</span></div>
+        </div>
+      `;
+
+      // Ajouter la section Clôture si la fiche est archivée
+      if (typeRes || docRef) {
+        htmlContenu += `
+          <div class="detail-section" style="border-left-color: #28a745; background-color: #f4faf5;">
+            <h4 style="margin-top:0; color:#155724;">Informations de Clôture</h4>
+            <div class="detail-grid">
+              <div class="detail-item"><strong>Type de résolution</strong> <span style="color:green; font-weight:bold;">${typeRes || '-'}</span></div>
+              <div class="detail-item"><strong>Réf Document</strong> <span>${docRef || '-'}</span></div>
+            </div>
+          </div>
+        `;
+      }
+      
+      document.getElementById("modal-details-content").innerHTML = htmlContenu;
+    }
+
+    window.onclick = function(event) {
+      let modalDetails = document.getElementById("detailsModal");
+      let modalClose = document.getElementById("modalClose");
+      if (event.target == modalDetails) modalDetails.style.display = "none";
+      if (event.target == modalClose) modalClose.style.display = "none";
+    }
+  </script>
+</body>
+</html>
